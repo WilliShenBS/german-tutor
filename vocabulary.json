@@ -4,23 +4,59 @@
       "units": {
         "1": [
           {
-            "type": "noun",
-            "word": "Haus",
-            "gender": "das",
-            "translation": "房子"
-          },
-          {
-            "type": "verb",
-            "word": "gehen",
-            "translation": "去"
-          },
-          {
-            "type": "phrase",
-            "content": "Guten Tag",
-            "translation": "你好",
-            "components": ["Guten", "Tag"]
-          }
-        ],
+            
+    "type": "noun",
+    "word": "Lektion",
+    "gender": "die",
+    "translation": "课文",
+    "plural": "-en"
+  },
+  {
+    "type": "noun",
+    "word": "Flughafen",
+    "gender": "der",
+    "translation": "机场"
+  },
+  {
+    "type": "verb",
+    "word": "heißen",
+    "translation": "叫，称呼",
+    "baseForm": "heißen",
+    "conjugation": "heißt, hieß, hat geheißen"
+  },
+  {
+    "type": "phrase",
+    "content": "Wie heißen Sie?",
+    "translation": "您叫什么名字？",
+    "components": ["Wie", "heißen", "Sie"]
+  },
+  {
+    "type": "verb",
+    "word": "studieren",
+    "translation": "大学学习",
+    "baseForm": "studieren",
+    "example": "Ich studiere in München."
+  },
+  {
+    "type": "phrase",
+    "content": "Guten Tag!",
+    "translation": "您好！",
+    "components": ["Guten", "Tag"]
+  },
+  {
+    "type": "noun",
+    "word": "Flugzeug",
+    "gender": "das",
+    "translation": "飞机",
+    "plural": "-e"
+  },
+  {
+    "type": "pronoun",
+    "word": "mein",
+    "translation": "我的",
+    "category": "物主代词"
+  }
+],
         "2": [
           {
             "type": "noun",
