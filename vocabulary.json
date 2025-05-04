@@ -1,0 +1,47 @@
+{
+  "levels": {
+    "A1": {
+      "units": {
+        "1": [
+          {
+            "type": "noun",
+            "word": "Haus",
+            "gender": "das",
+            "translation": "房子"
+          },
+          {
+            "type": "verb",
+            "word": "gehen",
+            "translation": "去"
+          },
+          {
+            "type": "phrase",
+            "content": "Guten Tag",
+            "translation": "你好",
+            "components": ["Guten", "Tag"]
+          }
+        ],
+        "2": [
+          {
+            "type": "noun",
+            "word": "Buch",
+            "gender": "das",
+            "translation": "书"
+          }
+        ]
+      }
+    },
+    "B2": {
+      "units": {
+        "5": [
+          {
+            "type": "phrase",
+            "content": "sich beschäftigen mit",
+            "translation": "从事于...",
+            "components": ["beschäftigen", "mit"]
+          }
+        ]
+      }
+    }
+  }
+}

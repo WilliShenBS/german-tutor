@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>德语学习助手</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <style>
+        .hero.is-info { background-color: #3273dc; }
+        .test-container { max-width: 600px; margin: 2rem auto; padding: 0 15px; }
+        .option-button { margin: 0.5rem; transition: all 0.3s; }
+        .option-button:hover { transform: scale(1.05); }
+        #progressBar { height: 5px; margin: 1rem 0; }
+        .highlight { background-color: #ffe08a; padding: 2px 5px; border-radius: 3px; }
+        .type-tag {
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #ddd;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <section class="hero is-info">
+        <div class="hero-body">
+            <h1 class="title">德语学习助手</h1>
+            <div class="tabs is-centered">
+                <ul>
+                    <li class="is-active" id="tabTest1"><a>四选一测试</a></li>
+                    <li id="tabTest2"><a>词性测试</a></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <div class="test-container">
+        <!-- 单元选择 -->
+        <div class="box">
+            <div class="field">
+                <label class="label">选择级别单元</label>
+                <div class="select is-fullwidth">
+                    <select id="unitSelect" onchange="startNewTest()"></select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 四选一测试界面 -->
+        <div id="test1Panel">
+            <div class="box">
+                <h2 class="subtitle" id="question"></h2>
+                <div id="optionsContainer" class="buttons are-medium is-centered"></div>
+            </div>
+        </div>
+
+        <!-- 词性测试界面 -->
+        <div id="test2Panel" style="display:none">
+            <div class="box">
+                <h2 class="subtitle">请选择词性：<span id="testWord"></span></h2>
+                <div class="buttons is-centered">
+                    <button class="button option-button" onclick="checkGender('der')">阳性 (der)</button>
+                    <button class="button option-button" onclick="checkGender('das')">中性 (das)</button>
+                    <button class="button option-button" onclick="checkGender('die')">阴性 (die)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="box">
+            <progress id="progressBar" class="progress is-primary" value="0" max="10"></progress>
+            <p class="has-text-centered">
+                正确率: <span id="accuracy">0%</span> | 
+                已答题: <span id="answered">0</span>/<span id="total">0</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 初始化数据
+        let vocabulary = {};
+        let currentTestType = 'test1';
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let correctCount = 0;
+        let totalAttempts = 0;
+
+        // 主初始化函数
+        async function init() {
+            await loadVocabulary();
+            migrateOldData();
+            populateUnitSelect();
+            startNewTest();
+        }
+
+        // 加载词库
+        async function loadVocabulary() {
+            try {
+                const response = await fetch('vocabulary.json');
+                vocabulary = await response.json();
+            } catch (error) {
+                console.error('加载词库失败:', error);
+            }
+        }
+
+        // 旧数据兼容处理
+        function migrateOldData() {
+            Object.values(vocabulary.levels).forEach(level => {
+                Object.values(level.units).forEach(unit => {
+                    unit.forEach(word => {
+                        if (!word.type) {
+                            word.type = word.gender ? 'noun' : 'phrase';
+                        }
+                        if (word.type === 'phrase' && !word.components) {
+                            word.components = word.content.split(' ');
+                        }
+                    });
+                });
+            });
+        }
+
+        // 生成单元选项
+        function populateUnitSelect() {
+            const select = document.getElementById('unitSelect');
+            ['A1', 'A2', 'B1', 'B2'].forEach(level => {
+                for(let unit = 1; unit <= 14; unit++) {
+                    const option = document.createElement('option');
+                    option.value = `${level}-${unit}`;
+                    option.textContent = `${level} - 单元 ${unit}`;
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        // 开始新测试
+        function startNewTest() {
+            const [level, unit] = document.getElementById('unitSelect').value.split('-');
+            let questions = getUnitQuestions(level, unit);
+            
+            if (currentTestType === 'test2') {
+                questions = questions.filter(q => q.type === 'noun');
+            }
+            
+            currentQuestions = shuffleArray(questions).slice(0, 10);
+            currentQuestionIndex = 0;
+            correctCount = 0;
+            totalAttempts = 0;
+            updateProgress();
+            showQuestion();
+        }
+
+        // 显示题目
+        function showQuestion() {
+            resetOptions();
+            if (currentQuestionIndex >= currentQuestions.length) return;
+
+            const question = currentQuestions[currentQuestionIndex];
+            
+            if (currentTestType === 'test2') {
+                document.getElementById('testWord').innerHTML = `
+                    ${question.word}
+                    <span class="type-tag">名词</span>
+                `;
+                return;
+            }
+
+            const isReverse = Math.random() > 0.5;
+            let displayText, answerKey;
+
+            if (question.type === 'phrase') {
+                displayText = isReverse ? question.translation : formatPhrase(question);
+                answerKey = 'content';
+            } else {
+                displayText = isReverse ? question.translation : question.word;
+                answerKey = 'word';
+            }
+
+            document.getElementById('question').innerHTML = displayText;
+            renderOptions(question, answerKey, isReverse);
+        }
+
+        // 渲染选项
+        function renderOptions(correctItem, answerKey, isReverse) {
+            const container = document.getElementById('optionsContainer');
+            const options = generateOptions(correctItem, answerKey, isReverse);
+            
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'button is-fullwidth option-button';
+                button.innerHTML = option.display;
+                button.onclick = () => checkAnswer(option.isCorrect);
+                container.appendChild(button);
+            });
+        }
+
+        // 生成选项
+        function generateOptions(correctItem, answerKey, isReverse) {
+            const options = [{
+                item: correctItem,
+                display: getDisplayText(correctItem, answerKey, isReverse),
+                isCorrect: true
+            }];
+
+            while (options.length < 4) {
+                const randomItem = getRandomItem(correctItem.type);
+                if (!options.some(opt => opt.item[answerKey] === randomItem[answerKey])) {
+                    options.push({
+                        item: randomItem,
+                        display: getDisplayText(randomItem, answerKey, isReverse),
+                        isCorrect: false
+                    });
+                }
+            }
+            return shuffleArray(options);
+        }
+
+        // 答案检查
+        function checkAnswer(isCorrect) {
+            totalAttempts++;
+            if (isCorrect) correctCount++;
+            
+            updateProgress();
+            showFeedback(isCorrect);
+            
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < currentQuestions.length) {
+                    showQuestion();
+                } else {
+                    showFinalResult();
+                }
+            }, 1000);
+        }
+
+        // 更新进度
+        function updateProgress() {
+            document.getElementById('answered').textContent = currentQuestionIndex + 1;
+            document.getElementById('total').textContent = currentQuestions.length;
+            document.getElementById('accuracy').textContent = 
+                totalAttempts > 0 ? `${Math.round((correctCount/totalAttempts)*100)}%` : "0%";
+            document.getElementById('progressBar').value = currentQuestionIndex + 1;
+        }
+
+        // 工具函数
+        function getUnitQuestions(level, unit) {
+            return vocabulary.levels[level]?.units[unit] || [];
+        }
+
+        function getRandomItem(type) {
+            const allItems = Object.values(vocabulary.levels)
+                .flatMap(l => Object.values(l.units))
+                .flat()
+                .filter(item => item.type === type);
+            return allItems[Math.floor(Math.random() * allItems.length)];
+        }
+
+        function formatPhrase(phrase) {
+            return phrase.content.replace(
+                new RegExp(`\\b(${phrase.components.join('|')})\\b`, 'gi'),
+                '<span class="highlight">$1</span>'
+            );
+        }
+
+        function getDisplayText(item, answerKey, isReverse) {
+            if (isReverse) return item.translation;
+            if (item.type === 'phrase') return formatPhrase(item);
+            return item[answerKey] + (item.type === 'noun' ? ` (${item.gender})` : '');
+        }
+
+        function shuffleArray(array) {
+            return array.sort(() => Math.random() - 0.5);
+        }
+
+        // 事件监听
+        document.querySelectorAll('.tabs li').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelector('.is-active').classList.remove('is-active');
+                tab.classList.add('is-active');
+                currentTestType = tab.id === 'tabTest1' ? 'test1' : 'test2';
+                document.getElementById('test1Panel').style.display = 
+                    currentTestType === 'test1' ? 'block' : 'none';
+                document.getElementById('test2Panel').style.display = 
+                    currentTestType === 'test2' ? 'block' : 'none';
+                startNewTest();
+            });
+        });
+
+        // 初始化执行
+        init();
+    </script>
+</body>
+</html>
